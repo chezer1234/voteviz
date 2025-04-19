@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge"; // Import Badge for candidates
 import { saveVoteDetails } from '@/lib/memory-store';
 import { getUserIdentifier } from '@/lib/user-identifier'; // Import the user identifier function
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 // Define the schema based on blueprint requirements
 const FormSchema = z.object({
@@ -138,6 +139,7 @@ export default function CreateVotePage() {
 
   return (
     <div className="flex justify-center items-start min-h-screen bg-gradient-to-br from-background to-muted/50 p-6 sm:p-12">
+    <ThemeToggle />
       <Card className="w-full max-w-3xl shadow-lg border border-border/50">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold tracking-tight sm:text-3xl">Create New Vote</CardTitle>
