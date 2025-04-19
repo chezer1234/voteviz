@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import QRCodeCanvas from 'qrcode.react'; // Correct import for QR code
+import { QRCodeCanvas } from 'qrcode.react'; // Correct import for QR code
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -170,3 +170,5 @@ const Button = ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonEle
   const className = `px-4 py-2 rounded text-white ${props.disabled ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'} ${props.className || ''}`;
   return <button {...props} className={className}>{children}</button>;
 };
+
+    
