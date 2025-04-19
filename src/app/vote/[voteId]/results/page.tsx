@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { QRCodeCanvas } from 'qrcode.react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,8 +38,11 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
     points,
   }));
 
+  // Get voteName and candidateName from local storage
+  const voteName = localStorage.getItem('voteName');
+    
   return {
-    voteName: "Favorite Color Vote", // Hardcoded Name
+    voteName: voteName || "Favorite Color Vote", // Hardcoded Name
     candidates: candidates,
     status: 'Open', //Hardcoded Status
     voteUrl: `${window.location.origin}/vote/${voteId}`
@@ -48,6 +51,7 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
 
 export default function VoteResultsPage() {
   const params = useParams();
+  const router = useRouter();
   const voteId = params.voteId as string;
   const [voteData, setVoteData] = useState<VoteData | null>(null);
   const [loading, setLoading] = useState(true);

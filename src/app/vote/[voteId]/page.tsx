@@ -45,13 +45,16 @@ const fetchVoteDetails = async (voteId: string): Promise<VoteDetails | null> => 
 let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
 
 // Mock function to submit vote
-const submitVote = async (voteId: string, points: CandidatePoints): Promise<boolean> => {
+const submitVote = async (voteId: string, points: CandidatePoints, voteName: string, candidates: { name: string }[]): Promise<boolean> => {
   console.log(`Submitting vote for ${voteId}:`, points);
   await new Promise(resolve => setTimeout(resolve, 700)); // Simulate network delay
 
   // Simulate saving to backend (replace with API call)
   voteResults[voteId] = points;
 
+   // Save voteName and candidateName to local storage
+   localStorage.setItem('voteName', voteName);
+  
   return true;
 };
 
@@ -142,7 +145,7 @@ export default function VotePage() {
 
     setSubmitting(true);
     try {
-      const success = await submitVote(voteId, candidatePoints);
+      const success = await submitVote(voteId, candidatePoints, voteDetails.voteName, voteDetails.candidates);
       if (success) {
         toast({ title: "Vote Submitted Successfully!" });
         router.push(`/vote/${voteId}/results`); // Redirect to results
