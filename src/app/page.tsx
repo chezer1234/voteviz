@@ -18,6 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge"; // Import Badge for candidates
+import { saveVoteDetails } from '@/lib/memory-store';
 
 // Define the schema based on blueprint requirements
 const FormSchema = z.object({
@@ -32,8 +33,6 @@ const FormSchema = z.object({
 
 type VoteFormData = z.infer<typeof FormSchema>;
 
-// In-memory store for vote details and results (replace with actual backend)
-let voteDetailsStore: { [voteId: string]: VoteFormData } = {};
 
 // Function to generate a unique vote ID
 const generateVoteId = (): string => {
@@ -48,11 +47,13 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
 
   try {
     const newVoteId = generateVoteId(); // Generate a unique VoteId
-    voteDetailsStore[newVoteId] = values; // Save vote details
+    // *** Use the centralized memory store ***
+    await saveVoteDetails(newVoteId, values); 
     console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
   } catch (error) {
     console.error("Failed to publish vote (simulated error)", error);
+    // If saveVoteDetails could potentially throw errors, add specific catch here
     return { success: false, voteId: null, error: "Failed to save vote to the server (simulated)." };
   }
 };
@@ -157,7 +158,7 @@ export default function CreateVotePage() {
 
               {/* Candidates */}
               <FormField
-                control={form.control} // Control this field for validation reporting
+                control={form.control}
                 name="candidates"
                 render={() => ( // We manage state separately, but hook into the form field for errors
                   <FormItem>

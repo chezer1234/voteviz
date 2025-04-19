@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getVoteDetails } from '@/lib/memory-store';
+
 
 // Mock data structure (replace with actual data fetching)
 interface VoteDetails {
@@ -21,28 +23,8 @@ interface CandidatePoints {
   [candidateName: string]: number;
 }
 
-// Mock data fetching function
-const fetchVoteDetails = async (voteId: string): Promise<VoteDetails | null> => {
-  console.log(`Fetching details for vote: ${voteId}`);
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-
-  // In a real app, fetch from your backend API
-  if (voteId === "mock-vote-123") { // Example ID
-    return {
-      voteName: "Favorite Color Vote",
-      candidates: [
-        { name: 'Red' },
-        { name: 'Blue' },
-        { name: 'Green' },
-      ],
-      status: 'Open', // Can be 'Pending', 'Open', 'Closed'
-    };
-  }
-  return null; // Vote not found
-};
-
 // In-memory store for vote data (replace with actual backend)
-let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
+// let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
 
 // Mock function to submit vote
 const submitVote = async (voteId: string, points: CandidatePoints, voteName: string, candidates: { name: string }[]): Promise<boolean> => {
@@ -50,10 +32,10 @@ const submitVote = async (voteId: string, points: CandidatePoints, voteName: str
   await new Promise(resolve => setTimeout(resolve, 700)); // Simulate network delay
 
   // Simulate saving to backend (replace with API call)
-  voteResults[voteId] = points;
+  // voteResults[voteId] = points;
 
    // Save voteName and candidateName to local storage
-   localStorage.setItem('voteName', voteName);
+  //  localStorage.setItem('voteName', voteName);
   
   return true;
 };
@@ -90,7 +72,7 @@ export default function VotePage() {
   // Fetch vote details and check if user has already voted
   useEffect(() => {
     if (voteId) {
-      fetchVoteDetails(voteId)
+      getVoteDetails(voteId)
         .then(data => {
           if (data) {
             setVoteDetails(data);
@@ -157,6 +139,8 @@ export default function VotePage() {
       toast({ title: "Vote Submission Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
       setSubmitting(false);
+    } finally {
+      router.push(`/vote/${voteId}/results`);
     }
   };
 
@@ -282,3 +266,4 @@ export default function VotePage() {
     </div>
   );
 }
+

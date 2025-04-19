@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button"; // Import Button
+import { getVoteResults } from '@/lib/memory-store';
 
 // Mock data structure (replace with actual data fetching)
 interface VoteData {
@@ -17,7 +18,7 @@ interface VoteData {
 }
 
 // In-memory store for vote data (replace with actual backend)
-let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
+// let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
 
 // Mock data fetching function (now fetches from in-memory store)
 const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
@@ -25,8 +26,7 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Retrieve results from the in-memory store
-  const results = voteResults[voteId];
+  const results = await getVoteResults(voteId);
 
   if (!results) {
     return null;
