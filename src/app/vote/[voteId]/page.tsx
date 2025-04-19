@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getVoteDetails } from '@/lib/memory-store';
+import { getVoteDetails, saveVoteDetails, saveVoteResults } from '@/lib/memory-store';
 
 
 // Mock data structure (replace with actual data fetching)
@@ -27,21 +27,20 @@ interface CandidatePoints {
 // let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
 
 // Mock function to submit vote
-const submitVote = async (voteId: string, points: CandidatePoints, voteName: string, candidates: { name: string }[]): Promise<boolean> => {
-  console.log(`Submitting vote for ${voteId}:`, points);
-  await new Promise(resolve => setTimeout(resolve, 700)); // Simulate network delay
+const submitVote = async (voteId: string, points: CandidatePoints, voteName: string, candidates: { name: string }[]): Promise<void> => {
+    console.log(`Submitting vote for ${voteId}:`, points);
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 700));
 
-  // Simulate saving to backend (replace with API call)
-  // voteResults[voteId] = points;
+    //  Call saveVoteDetails and saveVoteResults functions from memory-store
+    await saveVoteDetails(voteId, { voteName, candidates: candidates.map(c => c.name) });
+    await saveVoteResults(voteId, points);
 
-   // Save voteName and candidateName to local storage
-  //  localStorage.setItem('voteName', voteName);
-  
-  return true;
+    // No need to return a boolean, just await the save operations
 };
 
 // Mock function to propose a candidate
-const proposeCandidate = async (voteId: string, candidateName: string): Promise<boolean> => {
+const proposeCandidate = async (voteId: string, candidateName: string): Promise<boolean>  => {
   console.log(`Proposing candidate "${candidateName}" for vote ${voteId}`);
   await new Promise(resolve => setTimeout(resolve, 600)); // Simulate network delay
   // In a real app, send to backend (incl. AI check), handle success/failure
@@ -124,23 +123,19 @@ export default function VotePage() {
        toast({ title: "Voting is not currently open", variant: "destructive" });
        return;
     }
-
     setSubmitting(true);
     try {
-      const success = await submitVote(voteId, candidatePoints, voteDetails.voteName, voteDetails.candidates);
-      if (success) {
-        toast({ title: "Vote Submitted Successfully!" });
-        router.push(`/vote/${voteId}/results`); // Redirect to results
-      } else {
-        toast({ title: "Vote Submission Failed", description: "Could not record your vote. Please try again.", variant: "destructive" });
-      }
-    } catch (err) {
-      console.error("Error submitting vote:", err);
-      toast({ title: "Vote Submission Error", description: "An unexpected error occurred.", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    } finally {
+      // Directly call the submitVote function, which now handles saving internally
+      await submitVote(voteId, candidatePoints, voteDetails.voteName, voteDetails.candidates);
+
+      // If submission completes without throwing an error, assume success
+      toast({ title: "Vote Submitted Successfully!" });
+      localStorage.setItem('voteName', voteDetails.voteName);
       router.push(`/vote/${voteId}/results`);
+    } catch (err) {
+      toast({ title: "Vote Submission Failed", description: "Could not record your vote. Please try again.", variant: "destructive" });
+    } finally {
+        setSubmitting(false);
     }
   };
 
@@ -266,4 +261,3 @@ export default function VotePage() {
     </div>
   );
 }
-
