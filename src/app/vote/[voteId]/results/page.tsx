@@ -29,22 +29,44 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
   const results = await getVoteResults(voteId);
 
   if (!results) {
-    return null;
+     // If no results, return VoteData with an empty candidates array
+     const voteName = localStorage.getItem('voteName') || "Unnamed Vote";
+     return {
+       voteName: voteName,
+       candidates: [],
+       status: 'Open', // Assuming default status, adjust if needed
+       voteUrl: `${window.location.origin}/vote/${voteId}`,
+     };
+
   }
 
-   // Transform the results into the format expected by the component
-  const candidates = Object.entries(results).map(([name, points]) => ({
-    name,
-    points,
-  }));
+  // Aggregate results from multiple users
+  const aggregatedResults: { [candidateName: string]: number } = {};
+
+  for (const userResults of Object.values(results)) {
+    if (typeof userResults === 'object' && userResults !== null) {
+      for (const [candidateName, points] of Object.entries(userResults)) {
+        if (typeof points === 'number') {
+          aggregatedResults[candidateName] = (aggregatedResults[candidateName] || 0) + points;
+        }
+      }
+    }
+  }
+
+  // Transform the aggregated results into the format expected by the component
+  const candidates = Object.entries(aggregatedResults).map(([name, points]) => ({ name, points }));
+
 
   // Get voteName and candidateName from local storage
   const voteName = localStorage.getItem('voteName');
     
   return {
-    voteName: voteName || "Favorite Color Vote", // Hardcoded Name
+    voteName: voteName || "Unnamed Vote", 
     candidates: candidates,
-    status: 'Open', //Hardcoded Status
+    // Assuming status is not stored and defaults to 'Open' – adjust if needed.
+    // In a real app, fetch the status from the same source as results.
+    // If status is part of the vote details, you'd fetch details here too.
+    status: 'Open', 
     voteUrl: `${window.location.origin}/vote/${voteId}`
   };
 };

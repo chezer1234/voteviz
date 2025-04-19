@@ -24,7 +24,7 @@ import { saveVoteDetails } from '@/lib/memory-store';
 const FormSchema = z.object({
   voteName: z.string().min(2, { message: "Vote name must be at least 2 characters." }),
   candidates: z.array(z.string().min(1, { message: "Candidate names cannot be empty." }))
-                 .min(2, { message: "You must add at least 2 candidates." }),
+    .min(2, { message: "You must add at least 2 candidates." }),
   // Optional fields from blueprint
   maxVoters: z.coerce.number().positive("Maximum voters must be a positive number.").optional(), // Use coerce for number conversion
   pointsToCarry: z.coerce.number().positive("Points to carry must be a positive number.").optional(),
@@ -47,9 +47,10 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
 
   try {
     const newVoteId = generateVoteId(); // Generate a unique VoteId
+    console.log("Generated newVoteId:", newVoteId); // Add this line
     // *** Use the centralized memory store ***
-    await saveVoteDetails(newVoteId, values); 
-    console.log("Vote published successfully with ID:", newVoteId);
+    await saveVoteDetails(newVoteId, values);
+    console.log("Vote published successfully with ID:", newVoteId);   
     return { success: true, voteId: newVoteId };
   } catch (error) {
     console.error("Failed to publish vote (simulated error)", error);
@@ -83,9 +84,9 @@ export default function CreateVotePage() {
       form.setValue("candidates", newCandidates, { shouldValidate: true }); // Update form state & validate
       setCandidateInput(""); // Clear input
     } else if (candidates.includes(trimmedInput)) {
-       toast({ title: "Candidate already added", variant: "destructive" });
+      toast({ title: "Candidate already added", variant: "destructive" });
     } else {
-         toast({ title: "Candidate name cannot be empty", variant: "destructive" });
+      toast({ title: "Candidate name cannot be empty", variant: "destructive" });
     }
   };
 
@@ -101,8 +102,8 @@ export default function CreateVotePage() {
 
     try {
       const result = await publishVote(values);
-
       if (result.success && result.voteId) {
+        localStorage.setItem('voteName', values.voteName); // Store vote name
         toast({
           title: "Vote Published Successfully!",
           description: `Vote ID: ${result.voteId}`,
@@ -231,11 +232,11 @@ export default function CreateVotePage() {
                   <FormItem>
                     <FormLabel>Points to Carry Motion (Optional)</FormLabel>
                     <FormControl>
-                       <Input
+                      <Input
                         type="number"
                         placeholder="e.g., 200"
                         {...field}
-                         value={field.value ?? ""}
+                        value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Convert to number or undefined
                       />
                     </FormControl>
