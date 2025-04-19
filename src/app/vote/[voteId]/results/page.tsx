@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import QRCode from 'qrcode.react'; // Placeholder: Assuming a QR code library exists
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; // Placeholder: Assuming recharts or similar is installed
+import QRCodeCanvas from 'qrcode.react'; // Correct import for QR code
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -62,7 +62,7 @@ export default function VoteResultsPage() {
         .finally(() => {
           setLoading(false);
         });
-    }\ else {
+    } else {
       setError('No vote ID provided.');
       setLoading(false)
     }
@@ -113,7 +113,7 @@ export default function VoteResultsPage() {
            <div className="text-center p-4 border rounded">
             <h3 className="font-semibold mb-2">Scan to Vote</h3>
             {voteData.voteUrl ? (
-              <QRCode value={voteData.voteUrl} size={128} />
+              <QRCodeCanvas value={voteData.voteUrl} size={128} />
             ) : (
               <p>Could not generate QR code.</p>
             )}
