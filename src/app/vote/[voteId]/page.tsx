@@ -41,12 +41,17 @@ const fetchVoteDetails = async (voteId: string): Promise<VoteDetails | null> => 
   return null; // Vote not found
 };
 
+// In-memory store for vote data (replace with actual backend)
+let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
+
 // Mock function to submit vote
 const submitVote = async (voteId: string, points: CandidatePoints): Promise<boolean> => {
   console.log(`Submitting vote for ${voteId}:`, points);
   await new Promise(resolve => setTimeout(resolve, 700)); // Simulate network delay
-  // In a real app, send to backend, handle success/failure
-  // For simulation, we just resolve true
+
+  // Simulate saving to backend (replace with API call)
+  voteResults[voteId] = points;
+
   return true;
 };
 

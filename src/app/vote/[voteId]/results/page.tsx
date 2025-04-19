@@ -16,24 +16,44 @@ interface VoteData {
   voteUrl: string;
 }
 
-// Mock data fetching function
+// In-memory store for vote data (replace with actual backend)
+let voteResults: { [voteId: string]: { [candidateName: string]: number } } = {};
+
+// Mock data fetching function (now fetches from in-memory store)
 const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
   console.log(`Fetching data for vote: ${voteId}`);
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  // In a real app, fetch from your backend API
-  // For now, return mock data based on the ID (example)
   if (voteId === "mock-vote-123") {
+     // Retrieve results from the in-memory store
+    const results = voteResults[voteId];
+
+    if (!results) {
+      // If there are no results yet, return initial data
+      return {
+        voteName: "Favorite Color Vote",
+        candidates: [
+          { name: 'Red', points: 0 },
+          { name: 'Blue', points: 0 },
+          { name: 'Green', points: 0 },
+        ],
+        status: 'Open',
+        voteUrl: `${window.location.origin}/vote/${voteId}` // Generate voting page URL
+      };
+    }
+
+     // Transform the results into the format expected by the component
+    const candidates = Object.entries(results).map(([name, points]) => ({
+      name,
+      points,
+    }));
+
     return {
-      voteName: "Favorite Color Vote",
-      candidates: [
-        { name: 'Red', points: 35 },
-        { name: 'Blue', points: 50 },
-        { name: 'Green', points: 15 },
-      ],
-      status: 'Open',
-      voteUrl: `${window.location.origin}/vote/${voteId}` // Generate voting page URL
+      voteName: "Favorite Color Vote", // Hardcoded Name
+      candidates: candidates,
+      status: 'Open', //Hardcoded Status
+      voteUrl: `${window.location.origin}/vote/${voteId}`
     };
   }
   return null; // Vote not found
@@ -163,4 +183,3 @@ export default function VoteResultsPage() {
     </div>
   );
 }
-
