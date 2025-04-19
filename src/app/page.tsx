@@ -52,6 +52,9 @@ export default function Home() {
     defaultValues: {
       voteName: "",
       candidates: [],
+      maxVoters: undefined,
+      pointsToCarry: undefined,
+      votingEndDate: undefined,
     },
   });
 
@@ -241,4 +244,3 @@ export default function Home() {
   );
 }
 
-    
