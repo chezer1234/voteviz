@@ -42,18 +42,18 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
   await new Promise(resolve => setTimeout(resolve, 600));
 
   // --- Replace with actual backend API call ---
-  const success = Math.random() > 0.1; // Simulate 90% success rate
-  if (success) {
+  // const success = Math.random() > 0.1; // Simulate 90% success rate
+  // if (success) {
     // Generate a fixed VoteId for testing purposes
     const newVoteId = "mock-vote-123"; // Fixed vote ID
 	voteDetailsStore[newVoteId] = values; // Save vote details
 
     console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
-  } else {
-    console.error("Failed to publish vote (simulated error)");
-    return { success: false, voteId: null, error: "Failed to save vote to the server (simulated)." };
-  }
+  // } else {
+  //   console.error("Failed to publish vote (simulated error)");
+  //   return { success: false, voteId: null, error: "Failed to save vote to the server (simulated)." };
+  // }
   // --- End of backend simulation ---
 };
 
