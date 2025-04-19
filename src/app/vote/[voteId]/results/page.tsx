@@ -347,12 +347,15 @@ export default function VoteResultsPage() {
                 </CardHeader>
                  <CardContent className="flex justify-center items-center p-6">
                     {voteData.voteUrl ? (
-                        <QRCodeCanvas 
-                            value={voteData.voteUrl} 
-                            size={160} 
-                            bgColor="#FFFFFF" // Use white background
-                            fgColor="#000000" // Use black foreground
-                            level="Q"/>
+                        <div style={{ padding: '4px', background: 'white', borderRadius: '8px' }}>
+                          <QRCodeCanvas 
+                              value={voteData.voteUrl} 
+                              size={160} 
+                              bgColor="#FFFFFF" // Use white background
+                              fgColor="#000000" // Use black foreground
+                              level="Q"
+                          />
+                        </div>
                     ) : (
                         <p className="text-muted-foreground">QR code unavailable.</p>
                     )}
