@@ -151,7 +151,7 @@ export default function Home() {
                       <Input
                         type="number"
                         placeholder="Enter maximum number of voters"
-                        {...field}
+                        value={field.value === undefined ? "" : field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -177,7 +177,7 @@ export default function Home() {
                       <Input
                         type="number"
                         placeholder="Enter points to carry"
-                        {...field}
+                        value={field.value === undefined ? "" : field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -243,4 +243,3 @@ export default function Home() {
       </div>
   );
 }
-
