@@ -162,13 +162,3 @@ export default function VoteResultsPage() {
     </div>
   );
 }
-
-// Dummy Button component if not already imported globally
-// Usually you'd import this from '@/components/ui/button'
-const Button = ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
-  // Basic styling, replace with actual Shadcn Button if available
-  const className = `px-4 py-2 rounded text-white ${props.disabled ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'} ${props.className || ''}`;
-  return <button {...props} className={className}>{children}</button>;
-};
-
-    

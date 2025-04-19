@@ -38,10 +38,11 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
   // Simulate network delay & ID generation
   await new Promise(resolve => setTimeout(resolve, 600));
 
-  // --- Replace with actual backend API call --- 
+  // --- Replace with actual backend API call ---
   const success = Math.random() > 0.1; // Simulate 90% success rate
   if (success) {
-    const newVoteId = Math.random().toString(36).substring(2, 15);
+    // Generate a fixed VoteId for testing purposes
+    const newVoteId = "mock-vote-123"; // Fixed vote ID
     console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
   } else {
@@ -289,4 +290,3 @@ export default function CreateVotePage() {
     </div>
   );
 }
-
