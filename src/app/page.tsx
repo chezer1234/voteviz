@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge"; // Import Badge for candidates
 import { saveVoteDetails } from '@/lib/memory-store';
+import { getUserIdentifier } from '@/lib/user-identifier'; // Import the user identifier function
 
 // Define the schema based on blueprint requirements
 const FormSchema = z.object({
@@ -47,10 +48,11 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
 
   try {
     const newVoteId = generateVoteId(); // Generate a unique VoteId
-    console.log("Generated newVoteId:", newVoteId); // Add this line
+    const creatorToken = getUserIdentifier(); // Get the creator's unique token
+    console.log(`Generated newVoteId: ${newVoteId}, CreatorToken: ${creatorToken}`); 
     // *** Use the centralized memory store ***
-    await saveVoteDetails(newVoteId, values);
-    console.log("Vote published successfully with ID:", newVoteId);   
+    await saveVoteDetails(newVoteId, values, creatorToken); // Pass the creator token
+    console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
   } catch (error) {
     console.error("Failed to publish vote (simulated error)", error);
@@ -81,8 +83,8 @@ export default function CreateVotePage() {
     if (trimmedInput && !candidates.includes(trimmedInput)) {
       const newCandidates = [...candidates, trimmedInput];
       setCandidates(newCandidates);
-      form.setValue("candidates", newCandidates, { shouldValidate: true }); // Update form state & validate
-      setCandidateInput(""); // Clear input
+      form.setValue("candidates", newCandidates, { shouldValidate: true, shouldDirty: true }); // Validate on add
+      setCandidateInput("");
     } else if (candidates.includes(trimmedInput)) {
       toast({ title: "Candidate already added", variant: "destructive" });
     } else {
@@ -93,81 +95,90 @@ export default function CreateVotePage() {
   const handleRemoveCandidate = (candidateToRemove: string) => {
     const newCandidates = candidates.filter(c => c !== candidateToRemove);
     setCandidates(newCandidates);
-    form.setValue("candidates", newCandidates, { shouldValidate: true }); // Update form state & validate
+    form.setValue("candidates", newCandidates, { shouldValidate: true, shouldDirty: true }); // Validate on remove
   };
 
   const onSubmit = async (values: VoteFormData) => {
-    // The 'candidates' field is already managed by the form state
+    // Ensure candidates array is updated before submission
+    // (Though setValue should handle this, double-check if issues arise)
     console.log("Form submitted with values:", values);
+
+    // Trigger validation manually to be sure errors are shown if needed
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({ title: "Please fix the errors in the form.", variant: "destructive" });
+      return; // Stop submission if validation fails
+    }
 
     try {
       const result = await publishVote(values);
       if (result.success && result.voteId) {
-        localStorage.setItem('voteName', values.voteName); // Store vote name
+        // Don't store voteName in localStorage, it should be fetched on the results page
         toast({
           title: "Vote Published Successfully!",
-          description: `Vote ID: ${result.voteId}`,
+          description: `Your vote is ready. ID: ${result.voteId}`,
         });
-        // Redirect to the results page as per blueprint
         router.push(`/vote/${result.voteId}/results`);
       } else {
         toast({
           title: "Error Publishing Vote",
-          description: result.error || "An unknown error occurred.",
+          description: result.error || "An unknown server error occurred.",
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Error during vote publication process:", error);
       toast({
-        title: "Error Publishing Vote",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Network Error",
+        description: "Could not connect to the server. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>Create New Vote</CardTitle>
-          <CardDescription>
-            Define the parameters for your new vote.
+    <div className="flex justify-center items-start min-h-screen bg-gradient-to-br from-background to-muted/50 p-6 sm:p-12">
+      <Card className="w-full max-w-3xl shadow-lg border border-border/50">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight sm:text-3xl">Create New Vote</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Set up your proportional vote poll.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6">
+        <CardContent className="grid gap-6 pt-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Vote Name */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
                 control={form.control}
                 name="voteName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vote Name *</FormLabel>
+                    <FormLabel className="text-lg font-semibold">Vote Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter vote name (e.g., Team Mascot)" {...field} />
+                      <Input
+                        placeholder="e.g., Favorite Ice Cream Flavor"
+                        {...field}
+                        className="transition-colors focus:ring-primary focus:border-primary"
+                      />
                     </FormControl>
                     <FormDescription>
-                      The public name for this vote.
+                      Give your vote a clear and descriptive name.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Candidates */}
               <FormField
                 control={form.control}
                 name="candidates"
-                render={() => ( // We manage state separately, but hook into the form field for errors
+                render={() => (
                   <FormItem>
-                    <FormLabel>Candidates *</FormLabel>
+                    <FormLabel className="text-lg font-semibold">Candidates *</FormLabel>
                     <FormDescription>
-                      Add at least two candidates. Each voter can distribute 100 points.
+                      Add at least two options for voters to allocate points to.
                     </FormDescription>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex flex-col sm:flex-row gap-3 mb-3">
                       <Input
                         placeholder="Add candidate name"
                         value={candidateInput}
@@ -178,118 +189,140 @@ export default function CreateVotePage() {
                             handleAddCandidate();
                           }
                         }}
+                        className="flex-grow transition-colors focus:ring-primary focus:border-primary"
                       />
-                      <Button type="button" onClick={handleAddCandidate} variant="outline">Add</Button>
+                      <Button
+                        type="button"
+                        onClick={handleAddCandidate}
+                        variant="secondary"
+                        className="transition-colors whitespace-nowrap"
+                      >
+                        Add Candidate
+                      </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 min-h-[2.5rem] items-center p-2 border rounded">
+                    <div className="flex flex-wrap gap-2 min-h-[3rem] items-center p-3 border rounded-md bg-muted/30">
                       {candidates.length === 0 ? (
-                         <span className="text-sm text-muted-foreground">No candidates added yet.</span>
+                         <span className="text-sm text-muted-foreground italic px-1">No candidates added yet.</span>
                       ) : candidates.map((candidate) => (
-                         <Badge key={candidate} variant="secondary" className="flex items-center gap-1">
-                           {candidate}
+                         <Badge key={candidate} variant="outline" className="flex items-center gap-1.5 py-1 px-2.5 border-accent bg-accent/50 text-accent-foreground transition-colors">
+                           <span className="font-medium">{candidate}</span>
                            <button
                              type="button"
+                             aria-label={`Remove ${candidate}`}
                              onClick={() => handleRemoveCandidate(candidate)}
-                             className="ml-1 text-muted-foreground hover:text-destructive">
-                             &times;
+                             className="ml-1 text-muted-foreground rounded-full p-0.5 transition-colors hover:bg-destructive/20 hover:text-destructive">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                            </button>
                          </Badge>
                       ))}
                     </div>
-                    <FormMessage /> {/* Shows validation errors for the candidates array */}
-                  </FormItem>
-                )}
-              />
-
-              {/* Optional Fields */}
-              <FormField
-                control={form.control}
-                name="maxVoters"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Voters (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 50"
-                        {...field}
-                        value={field.value ?? ""} // Handle undefined for input value
-                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Convert to number or undefined
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Limit the number of unique voters allowed.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="pointsToCarry"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Points to Carry Motion (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 200"
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Convert to number or undefined
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The minimum total points required for the vote to be considered "passed".
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="votingEndDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Voting End Date (Optional)</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+              <div className="space-y-6 pt-4 border-t border-border/50">
+                <h3 className="text-lg font-semibold text-muted-foreground">Optional Settings</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="maxVoters"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Maximum Voters</FormLabel>
                         <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-[240px] pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="e.g., 50 (Unlimited if blank)"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                            className="transition-colors focus:ring-primary focus:border-primary"
+                          />
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                      If set, voting will automatically close on this date.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        <FormDescription>
+                          Limit the total number of voters.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Publishing..." : "Publish Vote"}
-              </Button>
+                  <FormField
+                    control={form.control}
+                    name="pointsToCarry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Points Per Voter</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Default: 100"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                            className="transition-colors focus:ring-primary focus:border-primary"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Points each voter can distribute.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="votingEndDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Voting End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal transition-colors focus:ring-primary focus:border-primary",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date (Optional)</span>}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Set an optional deadline for voting.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end pt-6 border-t border-border/50">
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto px-8 py-3 text-lg font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? "Publishing..." : "Publish Vote"}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>
