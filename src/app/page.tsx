@@ -32,6 +32,9 @@ const FormSchema = z.object({
 
 type VoteFormData = z.infer<typeof FormSchema>;
 
+// In-memory store for vote details and results (replace with actual backend)
+let voteDetailsStore: { [voteId: string]: VoteFormData } = {};
+
 // Mock function to simulate saving vote data to a backend
 const publishVote = async (values: VoteFormData): Promise<{ success: boolean; voteId: string | null; error?: string }> => {
   console.log("Publishing vote with data:", values);
@@ -43,6 +46,8 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
   if (success) {
     // Generate a fixed VoteId for testing purposes
     const newVoteId = "mock-vote-123"; // Fixed vote ID
+	voteDetailsStore[newVoteId] = values; // Save vote details
+
     console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
   } else {
@@ -107,7 +112,7 @@ export default function CreateVotePage() {
         toast({
           title: "Error Publishing Vote",
           description: result.error || "An unknown error occurred.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } catch (error) {

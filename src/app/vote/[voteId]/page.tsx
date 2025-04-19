@@ -87,13 +87,6 @@ export default function VotePage() {
   // Fetch vote details and check if user has already voted
   useEffect(() => {
     if (voteId) {
-      // Check local storage for previous vote
-      if (localStorage.getItem(voteStorageKey)) {
-        setHasVoted(true);
-        // Optionally redirect or show message immediately
-        // router.push(`/vote/${voteId}/results`);
-      }
-
       fetchVoteDetails(voteId)
         .then(data => {
           if (data) {
@@ -114,7 +107,7 @@ export default function VotePage() {
           setLoading(false);
         });
     }
-  }, [voteId, voteStorageKey, router]);
+  }, [voteId]);
 
   // Update total points whenever individual points change
   useEffect(() => {
@@ -146,17 +139,11 @@ export default function VotePage() {
        toast({ title: "Voting is not currently open", variant: "destructive" });
        return;
     }
-    if (hasVoted) {
-        toast({ title: "You have already voted in this poll", variant: "destructive" });
-       return;
-    }
 
     setSubmitting(true);
     try {
       const success = await submitVote(voteId, candidatePoints);
       if (success) {
-        localStorage.setItem(voteStorageKey, 'true'); // Mark as voted
-        setHasVoted(true);
         toast({ title: "Vote Submitted Successfully!" });
         router.push(`/vote/${voteId}/results`); // Redirect to results
       } else {
@@ -222,22 +209,6 @@ export default function VotePage() {
 
   if (!voteDetails) {
     return <div className="container mx-auto p-4 text-center">Vote not found.</div>;
-  }
-
-  if (hasVoted) {
-     return (
-      <div className="container mx-auto p-4 text-center">
-        <Card>
-          <CardHeader>
-            <CardTitle>Vote Cast</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">You have already cast your vote for "{voteDetails.voteName}".</p>
-            <Button onClick={() => router.push(`/vote/${voteId}/results`)}>View Results</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   const canPropose = voteDetails.status === 'Pending';
