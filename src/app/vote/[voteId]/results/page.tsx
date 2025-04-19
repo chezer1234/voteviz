@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { QRCodeCanvas } from 'qrcode.react'; // Correct import for QR code
+import { QRCodeCanvas } from 'qrcode.react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button"; // Import Button
 
 // Mock data structure (replace with actual data fetching)
 interface VoteData {
@@ -23,7 +24,7 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
 
   // In a real app, fetch from your backend API
   // For now, return mock data based on the ID (example)
-  if (voteId === "mock-vote-123") { // Example ID
+  if (voteId === "mock-vote-123") {
     return {
       voteName: "Favorite Color Vote",
       candidates: [
@@ -162,3 +163,4 @@ export default function VoteResultsPage() {
     </div>
   );
 }
+
