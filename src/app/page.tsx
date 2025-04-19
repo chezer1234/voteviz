@@ -1,116 +1,122 @@
 'use client'
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
+import { cn } from "@/lib/utils"; // Assuming you have a cn utility
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge"; // Import Badge for candidates
+
+// Define the schema based on blueprint requirements
 const FormSchema = z.object({
-  voteName: z.string().min(2, {
-    message: "Vote name must be at least 2 characters.",
-  }),
-  candidates: z.array(z.string()).min(2, {
-    message: "You must add at least 2 candidates.",
-  }),
-  maxVoters: z.number().optional(),
-  pointsToCarry: z.number().optional(),
+  voteName: z.string().min(2, { message: "Vote name must be at least 2 characters." }),
+  candidates: z.array(z.string().min(1, { message: "Candidate names cannot be empty." }))
+                 .min(2, { message: "You must add at least 2 candidates." }),
+  // Optional fields from blueprint
+  maxVoters: z.coerce.number().positive("Maximum voters must be a positive number.").optional(), // Use coerce for number conversion
+  pointsToCarry: z.coerce.number().positive("Points to carry must be a positive number.").optional(),
   votingEndDate: z.date().optional(),
 });
 
-export default function Home() {
-  const [candidates, setCandidates] = useState<string[]>([]);
-  const router = useRouter();
-  const [voteId, setVoteId] = useState<string | null>(null);
-  const { toast } = useToast(); // Use the useToast hook
+type VoteFormData = z.infer<typeof FormSchema>;
 
-  const form = useForm<z.infer<typeof FormSchema>>({
+// Mock function to simulate saving vote data to a backend
+const publishVote = async (values: VoteFormData): Promise<{ success: boolean; voteId: string | null; error?: string }> => {
+  console.log("Publishing vote with data:", values);
+  // Simulate network delay & ID generation
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  // --- Replace with actual backend API call --- 
+  const success = Math.random() > 0.1; // Simulate 90% success rate
+  if (success) {
+    const newVoteId = Math.random().toString(36).substring(2, 15);
+    console.log("Vote published successfully with ID:", newVoteId);
+    return { success: true, voteId: newVoteId };
+  } else {
+    console.error("Failed to publish vote (simulated error)");
+    return { success: false, voteId: null, error: "Failed to save vote to the server (simulated)." };
+  }
+  // --- End of backend simulation ---
+};
+
+export default function CreateVotePage() {
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [candidateInput, setCandidateInput] = useState("");
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const form = useForm<VoteFormData>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       voteName: "",
-      candidates: [],
+      candidates: [], // Initialize candidates array in form state
       maxVoters: undefined,
       pointsToCarry: undefined,
       votingEndDate: undefined,
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+  const handleAddCandidate = () => {
+    const trimmedInput = candidateInput.trim();
+    if (trimmedInput && !candidates.includes(trimmedInput)) {
+      const newCandidates = [...candidates, trimmedInput];
+      setCandidates(newCandidates);
+      form.setValue("candidates", newCandidates, { shouldValidate: true }); // Update form state & validate
+      setCandidateInput(""); // Clear input
+    } else if (candidates.includes(trimmedInput)) {
+       toast({ title: "Candidate already added", variant: "destructive" });
+    } else {
+         toast({ title: "Candidate name cannot be empty", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveCandidate = (candidateToRemove: string) => {
+    const newCandidates = candidates.filter(c => c !== candidateToRemove);
+    setCandidates(newCandidates);
+    form.setValue("candidates", newCandidates, { shouldValidate: true }); // Update form state & validate
+  };
+
+  const onSubmit = async (values: VoteFormData) => {
+    // The 'candidates' field is already managed by the form state
+    console.log("Form submitted with values:", values);
+
     try {
-      // Here you would typically save the vote data to a database
-      // and generate a unique ID for the vote.
-      // For this example, we'll just generate a random ID.
-      const newVoteId = Math.random().toString(36).substring(2, 15);
-      setVoteId(newVoteId);
+      const result = await publishVote(values);
 
-      // Simulate saving to a backend (replace with your actual API call)
-      await saveVoteData(newVoteId, values);
-
-      // After saving, navigate to the results page.
-      // Assuming you have a route like /vote/[voteId]/results
-      // where [voteId] is the unique ID of the vote.
-      console.log("Form values:", values);
-      router.push(`/vote/${newVoteId}/results`);
+      if (result.success && result.voteId) {
+        toast({
+          title: "Vote Published Successfully!",
+          description: `Vote ID: ${result.voteId}`,
+        });
+        // Redirect to the results page as per blueprint
+        router.push(`/vote/${result.voteId}/results`);
+      } else {
+        toast({
+          title: "Error Publishing Vote",
+          description: result.error || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Error saving vote data:", error);
+      console.error("Error during vote publication process:", error);
       toast({
-        title: "Error publishing vote",
-        description: "There was an error saving the vote. Please try again.",
+        title: "Error Publishing Vote",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
-  };
-
-  // Simulate saving to a backend
-  const saveVoteData = (voteId: string, values: z.infer<typeof FormSchema>) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // In a real application, you would save to a database here
-        console.log("Saving vote data to backend:", voteId, values);
-        resolve(true);
-      }, 500); // Simulate network delay
-    });
-  };
-
-  const addCandidate = (candidateName: string) => {
-    if (candidateName && !candidates.includes(candidateName)) {
-      setCandidates([...candidates, candidateName]);
-      form.setValue("candidates", [...candidates, candidateName]);
-    }
-  };
-
-  const removeCandidate = (candidateName: string) => {
-    const updatedCandidates = candidates.filter((candidate) => candidate !== candidateName);
-    setCandidates(updatedCandidates);
-    form.setValue("candidates", updatedCandidates);
   };
 
   return (
@@ -124,78 +130,87 @@ export default function Home() {
         </CardHeader>
         <CardContent className="grid gap-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Vote Name */}
               <FormField
                 control={form.control}
                 name="voteName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vote Name</FormLabel>
+                    <FormLabel>Vote Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter vote name" {...field} />
+                      <Input placeholder="Enter vote name (e.g., Team Mascot)" {...field} />
                     </FormControl>
                     <FormDescription>
-                      This is the name that will be displayed for the vote.
+                      The public name for this vote.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="grid gap-2">
-                <Label htmlFor="candidates">Candidates</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="newCandidate"
-                    placeholder="Add candidate"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addCandidate(e.currentTarget.value);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                </div>
-                <FormDescription>
-                  Add candidates for this vote. Press enter to add.
-                </FormDescription>
-                <div className="flex flex-wrap gap-2">
-                  {candidates.map((candidate) => (
-                    <Button
-                      key={candidate}
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => removeCandidate(candidate)}
-                    >
-                      {candidate} <span className="ml-1">x</span>
-                    </Button>
-                  ))}
-                </div>
-                {form.formState.errors.candidates && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.candidates?.message}
-                  </p>
+              {/* Candidates */}
+              <FormField
+                control={form.control} // Control this field for validation reporting
+                name="candidates"
+                render={() => ( // We manage state separately, but hook into the form field for errors
+                  <FormItem>
+                    <FormLabel>Candidates *</FormLabel>
+                    <FormDescription>
+                      Add at least two candidates. Each voter can distribute 100 points.
+                    </FormDescription>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        placeholder="Add candidate name"
+                        value={candidateInput}
+                        onChange={(e) => setCandidateInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCandidate();
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleAddCandidate} variant="outline">Add</Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 min-h-[2.5rem] items-center p-2 border rounded">
+                      {candidates.length === 0 ? (
+                         <span className="text-sm text-muted-foreground">No candidates added yet.</span>
+                      ) : candidates.map((candidate) => (
+                         <Badge key={candidate} variant="secondary" className="flex items-center gap-1">
+                           {candidate}
+                           <button
+                             type="button"
+                             onClick={() => handleRemoveCandidate(candidate)}
+                             className="ml-1 text-muted-foreground hover:text-destructive">
+                             &times;
+                           </button>
+                         </Badge>
+                      ))}
+                    </div>
+                    <FormMessage /> {/* Shows validation errors for the candidates array */}
+                  </FormItem>
                 )}
-              </div>
+              />
 
+              {/* Optional Fields */}
               <FormField
                 control={form.control}
                 name="maxVoters"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Maximum Number of Voters (Optional)</FormLabel>
+                    <FormLabel>Maximum Voters (Optional)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="Enter maximum number of voters"
-                        value={field.value === undefined ? "" : field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        placeholder="e.g., 50"
+                        {...field}
+                        value={field.value ?? ""} // Handle undefined for input value
+                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Convert to number or undefined
                       />
                     </FormControl>
                     <FormDescription>
-                      Limit the maximum number of unique voters allowed for this
-                      vote.
+                      Limit the number of unique voters allowed.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -207,21 +222,18 @@ export default function Home() {
                 name="pointsToCarry"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Number of Candidate Voting Points to Carry the Motion
-                      (Optional)
-                    </FormLabel>
+                    <FormLabel>Points to Carry Motion (Optional)</FormLabel>
                     <FormControl>
-                      <Input
+                       <Input
                         type="number"
-                        placeholder="Enter points to carry"
-                        value={field.value === undefined ? "" : field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        placeholder="e.g., 200"
+                        {...field}
+                         value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} // Convert to number or undefined
                       />
                     </FormControl>
                     <FormDescription>
-                      The minimum number of points a candidate needs to carry the
-                      motion.
+                      The minimum total points required for the vote to be considered "passed".
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -238,17 +250,13 @@ export default function Home() {
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant={"outline"}
-                            className={
-                              "w-[240px] pl-3 text-left font-normal" +
-                              (field.value ? " !text-foreground" : " text-muted-foreground")
-                            }
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
+                            variant="outline"
+                            className={cn(
+                              "w-[240px] pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
                             )}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
@@ -258,31 +266,27 @@ export default function Home() {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabledDate={(date) =>
-                            date < new Date()
-                          }
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
                     <FormDescription>
-                      The date and time when voting will automatically close.
+                      If set, voting will automatically close on this date.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <Button type="submit">Publish Vote</Button>
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Publishing..." : "Publish Vote"}
+              </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-      {voteId && (
-        <p>
-          Vote published! Go to <a href={`/vote/${voteId}/results`}>Results Page</a>
-        </p>
-      )}
-      </div>
+    </div>
   );
 }
+
