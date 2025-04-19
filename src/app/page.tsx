@@ -23,6 +23,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -31,7 +32,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
+import { useEffect } from 'react';
 
 const FormSchema = z.object({
   voteName: z.string().min(2, {
@@ -49,6 +50,7 @@ export default function Home() {
   const [candidates, setCandidates] = useState<string[]>([]);
   const router = useRouter();
   const [voteId, setVoteId] = useState<string | null>(null);
+  const { toast } = useToast(); // Use the useToast hook
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -61,18 +63,41 @@ export default function Home() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof FormSchema>) => {
-    // Here you would typically save the vote data to a database
-    // and generate a unique ID for the vote.
-    // For this example, we'll just generate a random ID.
-    const newVoteId = Math.random().toString(36).substring(2, 15);
-    setVoteId(newVoteId);
+  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
+    try {
+      // Here you would typically save the vote data to a database
+      // and generate a unique ID for the vote.
+      // For this example, we'll just generate a random ID.
+      const newVoteId = Math.random().toString(36).substring(2, 15);
+      setVoteId(newVoteId);
 
-    // After saving, navigate to the results page.
-    // Assuming you have a route like /vote/[voteId]/results
-    // where [voteId] is the unique ID of the vote.
-    console.log("Form values:", values);
-    router.push(`/vote/${newVoteId}/results`);
+      // Simulate saving to a backend (replace with your actual API call)
+      await saveVoteData(newVoteId, values);
+
+      // After saving, navigate to the results page.
+      // Assuming you have a route like /vote/[voteId]/results
+      // where [voteId] is the unique ID of the vote.
+      console.log("Form values:", values);
+      router.push(`/vote/${newVoteId}/results`);
+    } catch (error) {
+      console.error("Error saving vote data:", error);
+      toast({
+        title: "Error publishing vote",
+        description: "There was an error saving the vote. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Simulate saving to a backend
+  const saveVoteData = (voteId: string, values: z.infer<typeof FormSchema>) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // In a real application, you would save to a database here
+        console.log("Saving vote data to backend:", voteId, values);
+        resolve(true);
+      }, 500); // Simulate network delay
+    });
   };
 
   const addCandidate = (candidateName: string) => {
