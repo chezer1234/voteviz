@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -31,6 +30,8 @@ import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 
 const FormSchema = z.object({
   voteName: z.string().min(2, {
@@ -46,6 +47,8 @@ const FormSchema = z.object({
 
 export default function Home() {
   const [candidates, setCandidates] = useState<string[]>([]);
+  const router = useRouter();
+  const [voteId, setVoteId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -58,9 +61,19 @@ export default function Home() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof FormSchema>) {
-    console.log(values);
-  }
+  const onSubmit = (values: z.infer<typeof FormSchema>) => {
+    // Here you would typically save the vote data to a database
+    // and generate a unique ID for the vote.
+    // For this example, we'll just generate a random ID.
+    const newVoteId = Math.random().toString(36).substring(2, 15);
+    setVoteId(newVoteId);
+
+    // After saving, navigate to the results page.
+    // Assuming you have a route like /vote/[voteId]/results
+    // where [voteId] is the unique ID of the vote.
+    console.log("Form values:", values);
+    router.push(`/vote/${newVoteId}/results`);
+  };
 
   const addCandidate = (candidateName: string) => {
     if (candidateName && !candidates.includes(candidateName)) {
@@ -240,6 +253,11 @@ export default function Home() {
           </Form>
         </CardContent>
       </Card>
+      {voteId && (
+        <p>
+          Vote published! Go to <a href={`/vote/${voteId}/results`}>Results Page</a>
+        </p>
+      )}
       </div>
   );
 }
