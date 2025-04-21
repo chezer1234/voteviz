@@ -98,6 +98,20 @@ const CHART_COLORS = [
 
 const POLLING_INTERVAL = 5000; // Poll every 5 seconds
 
+// CustomTooltip component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2 bg-background border border-border rounded-md shadow-md">
+        <p className="font-semibold text-sm">{`${label}`}</p>
+        <p className="text-muted-foreground text-xs">Votes: {payload[0].value}</p>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 export default function VoteResultsPage() {
   const params = useParams();
   const router = useRouter();
@@ -351,10 +365,7 @@ export default function VoteResultsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false}/>
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`}/>
-                    <Tooltip
-                        cursor={{ fill: 'hsla(var(--accent), 0.5)' }}
-                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
-                    />
+                    <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="points" radius={[4, 4, 0, 0]}>
                       {voteData.candidates.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
