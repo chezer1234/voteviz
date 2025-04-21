@@ -9,9 +9,16 @@ interface VoteDetails {
   creatorToken?: string; // Optional: Identifier for the user who created the vote
 }
 
+// Define the structure for a single user's vote
+type UserVote = Record<string, number>; // { candidateName: points }
+
+// Define the structure for storing all results for a vote
+// Keyed by user identifier
+type VoteResults = Record<string, UserVote>; // { userId: { candidateName: points } }
+
 interface VoteData {
   details?: VoteDetails; // Use the specific type
-  results?: Record<string, Record<string, number>>; // Example: { userId: { candidateName: points } }
+  results?: VoteResults; // Use the specific type for results
 }
 
 // Enhance the globalThis type to include our store (TypeScript)
@@ -33,7 +40,7 @@ export async function saveVoteDetails(voteId: string, details: any, creatorToken
   store[voteId].details = {
     voteName: details.voteName,
     // Map candidate strings to objects if needed, handle existing objects
-    candidates: candidatesArray.map((candidate: string | { name: string }) => 
+    candidates: candidatesArray.map((candidate: string | { name: string }) =>
         typeof candidate === 'string' ? { name: candidate } : candidate
     ),
     status: 'Open', // Default status
@@ -51,19 +58,31 @@ export async function getVoteDetails(voteId: string): Promise<VoteDetails | unde
   return details;
 }
 
-export async function saveVoteResults(voteId: string, results: any): Promise<void> {
+// Modified saveVoteResults to store results per user
+export async function saveVoteResults(voteId: string, userId: string, userVote: UserVote): Promise<void> {
+  console.log(`[MemoryStore] saveVoteResults called with voteId: ${voteId}, userId: ${userId}, userVote:`, userVote);
   if (!store[voteId]) {
-    // Or handle error: Cannot save results for non-existent vote
+    // Initialize vote data if it doesn't exist (though details should ideally be saved first)
     store[voteId] = {};
+    console.log(`[MemoryStore] Initialized store for voteId: ${voteId}`);
   }
-  store[voteId].results = results;
-  console.log(`[MemoryStore] Saved results for vote ${voteId}:`, results);
-  console.log('[MemoryStore] Current store state:', store); // Add this line
+
+  // Initialize results object if it doesn't exist
+  if (!store[voteId].results) {
+    store[voteId].results = {};
+    console.log(`[MemoryStore] Initialized results for voteId: ${voteId}`);
+  }
+
+  // Save or update the vote for the specific user
+  store[voteId].results![userId] = userVote;
+  console.log(`[MemoryStore] Saved results for user ${userId} in vote ${voteId}:`, store[voteId].results![userId]);
+  console.log('[MemoryStore] Current store state:', store);
 }
 
-export async function getVoteResults(voteId: string): Promise<any | undefined> {
+// Modified getVoteResults to return all results for the vote
+export async function getVoteResults(voteId: string): Promise<VoteResults | undefined> {
   const results = store[voteId]?.results;
-  console.log(`[MemoryStore] Retrieved results for vote ${voteId}:`, results);
+  console.log(`[MemoryStore] Retrieved all results for vote ${voteId}:`, results);
   return results;
 }
 
@@ -106,6 +125,4 @@ export async function closeVote(voteId: string, providedToken: string): Promise<
     console.log('[MemoryStore] Current store state:', store);
     return { success: true, message: "Vote successfully closed." };
 }
-
-
 

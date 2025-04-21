@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // Added useRef
 import { useParams, useRouter } from 'next/navigation';
 import { QRCodeCanvas } from 'qrcode.react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2Icon, InfoIcon, BanIcon, Share2Icon, CopyIcon, CheckIcon, XCircleIcon, LockIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Tooltip as ShadTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Renamed import
+import { Tooltip as ShadTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Interfaces and fetch function (keep as is, ensure fetch handles details/results correctly)
 interface VoteData {
@@ -25,12 +25,12 @@ interface VoteData {
   voteUrl: string;
   creatorToken?: string;
   maxVoters?: number; // Added for display
-  // Consider adding pointsPerVoter if set
 }
 
 const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
-  console.log(`Fetching data for vote: ${voteId}`);
-  await new Promise(resolve => setTimeout(resolve, 300)); // Shorter delay simulation
+  console.log(`[ResultsPage] Fetching data for vote: ${voteId}`);
+  // No artificial delay needed here anymore
+  // await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
     const [details, results] = await Promise.all([
@@ -42,21 +42,23 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
     console.log(`[ResultsPage] Fetched results for ${voteId}:`, results);
 
     if (!details) {
-      console.error(`Vote details not found for ${voteId}`);
+      console.error(`[ResultsPage] Vote details not found for ${voteId}`);
       return null;
     }
 
+    // Aggregate results from all users
     const aggregatedResults: { [candidateName: string]: number } = {};
     if (results) {
-      for (const userResults of Object.values(results)) {
-        if (typeof userResults === 'object' && userResults !== null) {
-          for (const [candidateName, points] of Object.entries(userResults)) {
-            if (typeof points === 'number') {
-              aggregatedResults[candidateName] = (aggregatedResults[candidateName] || 0) + points;
+        // results is now { userId1: { cand1: pts, ... }, userId2: { cand1: pts, ... } }
+        for (const userResults of Object.values(results)) {
+            if (typeof userResults === 'object' && userResults !== null) {
+                for (const [candidateName, points] of Object.entries(userResults)) {
+                    if (typeof points === 'number') {
+                        aggregatedResults[candidateName] = (aggregatedResults[candidateName] || 0) + points;
+                    }
+                }
             }
-          }
         }
-      }
     }
 
     const candidatesWithPoints = details.candidates.map(candidate => ({
@@ -73,7 +75,7 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
       status: details.status,
       voteUrl: voteUrl,
       creatorToken: details.creatorToken,
-      maxVoters: details.maxVoters, // Pass maxVoters
+      maxVoters: details.maxVoters,
     };
   } catch (error) {
     console.error(`[ResultsPage] Error fetching vote data for ${voteId}:`, error);
@@ -81,14 +83,12 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
   }
 };
 
-// Predefined chart colors from globals.css variables (ideally load these dynamically)
+// Predefined chart colors from globals.css variables
 const CHART_COLORS = [
-  'hsl(var(--chart-1))', // Teal
-  'hsl(var(--chart-2))', // Orange
-  'hsl(var(--chart-3))', // Purple
-  'hsl(var(--chart-4))', // Yellow
-  'hsl(var(--chart-5))', // Green
+  'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'
 ];
+
+const POLLING_INTERVAL = 5000; // Poll every 5 seconds
 
 export default function VoteResultsPage() {
   const params = useParams();
@@ -103,36 +103,69 @@ export default function VoteResultsPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
   const [currentUserToken, setCurrentUserToken] = useState<string>("");
+  const intervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to store interval ID
 
   // Get user identifier client-side
   useEffect(() => {
     setCurrentUserToken(getUserIdentifier());
   }, []);
 
-  // Fetch data and check creator status
-  useEffect(() => {
-    if (voteId && currentUserToken) { // Ensure token is available
-      setLoading(true);
-      fetchVoteData(voteId)
-        .then(data => {
-          if (data) {
-            setVoteData(data);
-            setIsCreator(data.creatorToken === currentUserToken);
-          } else {
-            setError('Vote not found or could not be loaded.');
-          }
-        })
-        .catch(err => {
-          console.error("Error fetching vote data:", err);
-          setError('Failed to load vote data. Please try again later.');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  // Function to fetch and update data
+  const loadData = async (isInitialLoad = false) => {
+    if (isInitialLoad) setLoading(true);
+    try {
+      const data = await fetchVoteData(voteId);
+      if (data) {
+        setVoteData(data);
+        if (currentUserToken) { // Check if token is already set
+          setIsCreator(data.creatorToken === currentUserToken);
+        }
+        // If vote is closed, stop polling
+        if (data.status === 'Closed' && intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+          console.log("[ResultsPage] Vote closed, stopping polling.");
+        }
+      } else {
+        setError('Vote not found or could not be loaded.');
+        if (intervalRef.current) clearInterval(intervalRef.current); // Stop polling on error
+      }
+    } catch (err) {
+      console.error("Error in loadData:", err);
+      setError('Failed to load vote data. Please try again later.');
+      if (intervalRef.current) clearInterval(intervalRef.current); // Stop polling on error
+    } finally {
+      if (isInitialLoad) setLoading(false);
     }
-    // TODO: Implement live updates (polling or websockets)
+  };
 
-  }, [voteId, currentUserToken]); // Depend on currentUserToken
+  // Initial data load and creator check
+  useEffect(() => {
+    if (voteId && currentUserToken) {
+      loadData(true); // Pass true for initial load
+    }
+  }, [voteId, currentUserToken]); // Depend on voteId and currentUserToken
+
+  // Set up polling
+  useEffect(() => {
+    // Start polling only if voteData exists and status is Open
+    if (voteData && voteData.status === 'Open' && !intervalRef.current) {
+      console.log("[ResultsPage] Vote is open, starting polling.");
+      intervalRef.current = setInterval(() => {
+        console.log("[ResultsPage] Polling for updates...");
+        loadData(); // Fetch updates without setting loading state
+      }, POLLING_INTERVAL);
+    }
+
+    // Cleanup function to clear interval on component unmount or status change
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        console.log("[ResultsPage] Cleaning up polling interval.");
+      }
+    };
+  }, [voteId, voteData?.status]); // Depend on voteId and vote status
 
   const handleCopyToClipboard = () => {
     if (!voteData?.voteUrl) return;
@@ -140,7 +173,7 @@ export default function VoteResultsPage() {
       .then(() => {
         setHasCopied(true);
         toast({ title: "Link Copied!", description: "Vote link copied to clipboard." });
-        setTimeout(() => setHasCopied(false), 2000); // Reset icon after 2s
+        setTimeout(() => setHasCopied(false), 2000);
       })
       .catch(err => {
         console.error("Failed to copy link:", err);
@@ -149,11 +182,14 @@ export default function VoteResultsPage() {
   };
 
   const handleCloseVote = async () => {
-      if (!isCreator || !voteId || !currentUserToken) return;
+      if (!isCreator || !voteId || !currentUserToken || voteData?.status !== 'Open') return;
       setIsClosing(true);
       setError(null);
+      if (intervalRef.current) { // Clear interval immediately when attempting to close
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+      }
       try {
-        // Re-use creator token fetched earlier
         const response = await fetch(`/api/vote/${voteId}/close`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -163,12 +199,14 @@ export default function VoteResultsPage() {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Failed to close the vote.');
         }
+        // Update local state immediately and stop polling (already done)
         setVoteData(prevData => prevData ? { ...prevData, status: 'Closed' } : null);
-        toast({ title: "Vote Closed Successfully", variant: "default" }); // Changed variant
+        toast({ title: "Vote Closed Successfully", variant: "default" });
       } catch (err: any) {
           console.error("Error closing vote:", err);
           setError(err.message || 'An error occurred while closing the vote.');
           toast({ title: "Error Closing Vote", description: err.message, variant: "destructive" });
+          // Optionally restart polling if the close failed and status is still Open? Might be complex.
       } finally {
           setIsClosing(false);
       }
@@ -176,8 +214,8 @@ export default function VoteResultsPage() {
 
   const getStatusBadgeVariant = (status: VoteData['status']) => {
     switch (status) {
-      case 'Open': return 'secondary'; // Changed from 'success' to 'secondary'
-      case 'Closed': return 'destructive'; // Use destructive for closed
+      case 'Open': return 'secondary';
+      case 'Closed': return 'destructive';
       case 'Pending': return 'outline';
       default: return 'secondary';
     }
@@ -231,7 +269,7 @@ export default function VoteResultsPage() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-8">
 
-        {/* Header Card with Title, Status, and Actions */}
+        {/* Header Card */}
         <Card className="shadow-lg border border-border/50 overflow-hidden">
           <CardHeader className="bg-card/80 border-b border-border/50 p-6 flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
@@ -267,7 +305,7 @@ export default function VoteResultsPage() {
             </div>
           </CardHeader>
 
-          {/* Share Section */} 
+          {/* Share Section */}
           {voteData.status === 'Open' && (
             <CardContent className="p-6 border-b border-border/50">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg border border-dashed">
@@ -295,7 +333,7 @@ export default function VoteResultsPage() {
             </CardContent>
           )}
 
-          {/* Results Chart */} 
+          {/* Results Chart */}
           <CardContent className="p-6">
             <h3 className="text-xl font-semibold mb-4 text-foreground">Results Breakdown</h3>
             {hasResults ? (
@@ -338,7 +376,7 @@ export default function VoteResultsPage() {
           </CardFooter>
         </Card>
 
-        {/* QR Code Card (Optional - could be integrated elsewhere) */} 
+        {/* QR Code Card */}
         {voteData.status === 'Open' && (
             <Card className="shadow-lg border border-border/50">
                 <CardHeader>
@@ -348,11 +386,11 @@ export default function VoteResultsPage() {
                  <CardContent className="flex justify-center items-center p-6">
                     {voteData.voteUrl ? (
                         <div style={{ padding: '4px', background: 'white', borderRadius: '8px' }}>
-                          <QRCodeCanvas 
-                              value={voteData.voteUrl} 
-                              size={160} 
-                              bgColor="#FFFFFF" // Use white background
-                              fgColor="#000000" // Use black foreground
+                          <QRCodeCanvas
+                              value={voteData.voteUrl}
+                              size={160}
+                              bgColor="#FFFFFF"
+                              fgColor="#000000"
                               level="Q"
                           />
                         </div>
