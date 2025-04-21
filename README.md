@@ -3,6 +3,10 @@ A multi-user, proportional voting application.
 
 The state of each vote must be kept at the server.
 
+[Try me out - Live Version](https://studio--voteviz-o5pm0.us-central1.hosted.app/)
+
+#### Note - Fully VIBE coded
+
 ## Home Page
 The home page allows a new “Vote” to be created with a name and the following options:
 - Add candidates
