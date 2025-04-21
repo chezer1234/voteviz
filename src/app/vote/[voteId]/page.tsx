@@ -36,8 +36,8 @@ const submitVote = async (voteId: string, points: CandidatePoints): Promise<void
     await new Promise(resolve => setTimeout(resolve, 700));
     const userVoteKey = `user-${Date.now()}-${Math.random().toString(36).substring(7)}`; // More robust key
     // Use the centralized memory store
-    // Assuming saveVoteResults takes the user's vote and merges it
-    await saveVoteResults(voteId, { [userVoteKey]: points });
+    // Fix: Pass the user key and points separately to match the function signature
+    await saveVoteResults(voteId, userVoteKey, points);
     console.log('[VotePage] Saved results via submitVote for user:', userVoteKey);
 };
 
@@ -206,8 +206,8 @@ export default function VotePage() {
 
         setSubmitting(true);
         try {
-            // Pass the specific user's points
-            await saveVoteResults(voteId, { [userId]: candidatePoints });
+            // Fix: Pass userId and candidatePoints directly instead of nesting
+            await saveVoteResults(voteId, userId, candidatePoints);
             toast({ title: "Vote Submitted Successfully!", description: "Your points have been recorded.", variant: "default" }); // Use default variant
             setHasVoted(true);
             if (votePointsKey) localStorage.removeItem(votePointsKey); // Clear draft points after successful submission

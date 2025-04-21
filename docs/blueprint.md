@@ -6,16 +6,6 @@
 - Page Generation: Generate unique vote pages for casting votes and viewing results.
 - Results Display: Display a QR code and live bar chart of voting results, updating as votes are cast.
 - Vote Casting: Allow unique visitors to allocate 100 points across candidates using horizontal bar sliders.
-- Candidate Recommendation: AI tool that determines if a new proposed candidate is similar to existing candidates, based on a similarity score.
-
-## Style Guidelines:
-
-- Primary color: Neutral white or light gray for a clean background.
-- Secondary color: A calming blue (#3498db) to represent trust and stability.
-- Accent: Green (#2ecc71) for indicating a successful vote or carried motion.
-- Use a grid-based layout to ensure a clear and organized presentation of candidates and voting options.
-- Use simple, clear icons to represent different voting options and statuses.
-- Subtle animations to indicate changes in vote counts or status updates.
 
 ## Original User Request:
 # VoteChain
@@ -52,4 +42,3 @@ Horizontal bar sliders that can distribute points (up to 100 across all candidat
 - Not be able to be increased unless the total is below 100
 
 A place vote button (available when voting is open AND the votes total 100.
-  

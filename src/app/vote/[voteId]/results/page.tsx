@@ -50,21 +50,29 @@ const fetchVoteData = async (voteId: string): Promise<VoteData | null> => {
     const aggregatedResults: { [candidateName: string]: number } = {};
     if (results) {
         // results is now { userId1: { cand1: pts, ... }, userId2: { cand1: pts, ... } }
-        for (const userResults of Object.values(results)) {
+        console.log(`[ResultsPage] Processing results for ${voteId} with ${Object.keys(results).length} user results`);
+        for (const userId of Object.keys(results)) {
+            const userResults = results[userId];
+            console.log(`[ResultsPage] Processing results from user ${userId}:`, userResults);
             if (typeof userResults === 'object' && userResults !== null) {
                 for (const [candidateName, points] of Object.entries(userResults)) {
                     if (typeof points === 'number') {
                         aggregatedResults[candidateName] = (aggregatedResults[candidateName] || 0) + points;
+                        console.log(`[ResultsPage] Adding ${points} points to ${candidateName}, total: ${aggregatedResults[candidateName]}`);
                     }
                 }
             }
         }
     }
-
+    
+    console.log(`[ResultsPage] Final aggregated results:`, aggregatedResults);
+    
     const candidatesWithPoints = details.candidates.map(candidate => ({
       name: candidate.name,
       points: aggregatedResults[candidate.name] || 0
     }));
+    
+    console.log(`[ResultsPage] Candidates with points:`, candidatesWithPoints);
 
     // Ensure voteUrl generation happens client-side or uses env var for domain
     const voteUrl = typeof window !== 'undefined' ? `${window.location.origin}/vote/${voteId}` : '';
