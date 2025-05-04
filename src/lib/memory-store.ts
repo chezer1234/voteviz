@@ -7,6 +7,8 @@ interface VoteDetails {
   status: 'Open' | 'Closed' | 'Pending'; // Use specific status types
   maxVoters?: number; // Optional max voters
   creatorToken?: string; // Optional: Identifier for the user who created the vote
+  gradualRevealEnabled?: boolean; // Option to enable gradual reveal of results
+  revealDuration?: number; // Duration in seconds for the gradual reveal animation
 }
 
 // Define the structure for a single user's vote
@@ -46,6 +48,8 @@ export async function saveVoteDetails(voteId: string, details: any, creatorToken
     status: 'Open', // Default status
     maxVoters: details.maxVoters, // Store maxVoters if provided
     creatorToken: creatorToken, // Store the creator token
+    gradualRevealEnabled: details.gradualRevealEnabled, // Store gradual reveal option
+    revealDuration: details.revealDuration, // Store reveal duration
   };
   console.log(`[MemoryStore] Saved details for vote ${voteId}:`, store[voteId].details);
   console.log('[MemoryStore] Current store state:', store);

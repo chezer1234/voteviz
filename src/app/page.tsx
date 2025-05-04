@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"; // Import Badge for candidates
 import { saveVoteDetails } from '@/lib/memory-store';
 import { getUserIdentifier } from '@/lib/user-identifier'; // Import the user identifier function
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Switch } from "@/components/ui/switch"; // Import Switch for toggle
 
 // Define the schema based on blueprint requirements
 const FormSchema = z.object({
@@ -31,6 +32,31 @@ const FormSchema = z.object({
   maxVoters: z.coerce.number().positive("Maximum voters must be a positive number.").optional(), // Use coerce for number conversion
   pointsToCarry: z.coerce.number().positive("Points to carry must be a positive number.").optional(),
   votingEndDate: z.date().optional(),
+  // New fields for gradual reveal
+  gradualRevealEnabled: z.boolean().default(false),
+  // Replace single revealDuration with minutes and seconds fields
+  revealDurationMinutes: z.coerce.number().min(0).max(30, "Maximum duration is 30 minutes").default(0).optional(),
+  revealDurationSeconds: z.coerce.number().min(0).max(59, "Seconds must be between 0 and 59").default(30).optional(),
+}).refine((data) => {
+  // Skip validation if gradual reveal is not enabled
+  if (!data.gradualRevealEnabled) return true;
+  
+  // Ensure total time is at least 5 seconds
+  const totalSeconds = (data.revealDurationMinutes || 0) * 60 + (data.revealDurationSeconds || 0);
+  return totalSeconds >= 5;
+}, {
+  message: "Total reveal duration must be at least 5 seconds",
+  path: ["revealDurationSeconds"]
+}).refine((data) => {
+  // Skip validation if gradual reveal is not enabled
+  if (!data.gradualRevealEnabled) return true;
+  
+  // Ensure total time doesn't exceed 30 minutes
+  const totalSeconds = (data.revealDurationMinutes || 0) * 60 + (data.revealDurationSeconds || 0);
+  return totalSeconds <= 1800;
+}, {
+  message: "Total reveal duration cannot exceed 30 minutes",
+  path: ["revealDurationMinutes"]
 });
 
 type VoteFormData = z.infer<typeof FormSchema>;
@@ -51,8 +77,15 @@ const publishVote = async (values: VoteFormData): Promise<{ success: boolean; vo
     const newVoteId = generateVoteId(); // Generate a unique VoteId
     const creatorToken = getUserIdentifier(); // Get the creator's unique token
     console.log(`Generated newVoteId: ${newVoteId}, CreatorToken: ${creatorToken}`); 
+    
+    // Convert minutes and seconds to a single duration in seconds
+    const formValues = {...values} as VoteFormData & { revealDuration?: number };
+    if (formValues.gradualRevealEnabled) {
+      formValues.revealDuration = (formValues.revealDurationMinutes || 0) * 60 + (formValues.revealDurationSeconds || 0);
+    }
+    
     // *** Use the centralized memory store ***
-    await saveVoteDetails(newVoteId, values, creatorToken); // Pass the creator token
+    await saveVoteDetails(newVoteId, formValues, creatorToken); // Pass the creator token
     console.log("Vote published successfully with ID:", newVoteId);
     return { success: true, voteId: newVoteId };
   } catch (error) {
@@ -76,6 +109,9 @@ export default function CreateVotePage() {
       maxVoters: undefined,
       pointsToCarry: undefined,
       votingEndDate: undefined,
+      gradualRevealEnabled: false,
+      revealDurationMinutes: 0,
+      revealDurationSeconds: 30,
     },
   });
 
@@ -314,6 +350,85 @@ export default function CreateVotePage() {
                     </FormItem>
                   )}
                 />
+
+                {/* New Gradual Reveal section */}
+                <div className="pt-4 border-t border-border/50">
+                  <h3 className="text-lg font-semibold text-muted-foreground mb-4">Results Display</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="gradualRevealEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Gradual Reveal</FormLabel>
+                          <FormDescription>
+                            Animate results slowly for dramatic effect when the vote closes
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch("gradualRevealEnabled") && (
+                    <div className="mt-4 space-y-4">
+                      <h4 className="text-sm font-medium">Reveal Duration</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="revealDurationMinutes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Minutes</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="30"
+                                  {...field}
+                                  value={field.value ?? 0}
+                                  onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                                  className="transition-colors focus:ring-primary focus:border-primary"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="revealDurationSeconds"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Seconds</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="59"
+                                  {...field}
+                                  value={field.value ?? 30}
+                                  onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                                  className="transition-colors focus:ring-primary focus:border-primary"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormDescription>
+                        How long the results animation should take (max 30 minutes)
+                      </FormDescription>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end pt-6 border-t border-border/50">
